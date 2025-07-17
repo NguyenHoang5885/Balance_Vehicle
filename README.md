@@ -15,20 +15,23 @@
 - Battery Pack
 
 🔌 Wiring Diagram
-- Component	Pin on Arduino
-//-----------------------------
-      MPU6050    |  UNO
-   MPU6050 - VCC |	5V
-   MPU6050 - GND |	GND
-   MPU6050 - SDA |	SDA
-   MPU6050 - SCL |	SCL
-//-----------------------------
-      L298N      |  UNO
-   L298N - IN1	 |  D13
-   L298N - IN2	 |  D12
-   L298N - IN3   |	D10
-   L298N - IN4	 |  D8
-   L298N - ENA	 |  D11 (PWM)
-   L298N - ENB	 |  D9 (PWM)
-   L298N - VCC	 |  12V (Battery)
-   L298N - GND	 |  GND
+
+#### MPU6050 → Arduino UNO
+| MPU6050 Pin | Arduino Pin |
+|-------------|-------------|
+| VCC         | 5V          |
+| GND         | GND         |
+| SDA         | A4 (SDA)    |
+| SCL         | A5 (SCL)    |
+
+#### L298N → Arduino UNO
+| L298N Pin | Arduino Pin |
+|-----------|-------------|
+| IN1       | D13         |
+| IN2       | D12         |
+| IN3       | D10         |
+| IN4       | D8          |
+| ENA       | D11 (PWM)   |
+| ENB       | D9  (PWM)   |
+| VCC       | 12V Battery |
+| GND       | GND         |
