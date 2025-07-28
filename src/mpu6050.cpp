@@ -3,13 +3,23 @@
 #include "mpu6050.h"  
 #include "SimpleKalmanFilter.h"
 
-SimpleKalmanFilter Pitch_filter( 2, 10, 0.01);
-SimpleKalmanFilter Roll_filter ( 2, 10, 0.01);
+SimpleKalmanFilter Pitch_filter( 2, 2, 0.01);
+SimpleKalmanFilter Roll_filter ( 2, 2, 0.01);
 
 int16_t ax, ay ,az, temp, gx, gy, gz;
 float pitch_raw, roll_raw;
 float gx_offset, gy_offset;
 float startPoint = 0;
+float Gravity_fax, Gravity_fay;
+//static float Integral_fgx = 0, Integral_fgy = 0;
+
+float alpha = 0.99;
+static unsigned long lastTime = 0;
+unsigned long preTime;
+float dt;
+float gyro_sensitive = 16.4; 
+float fax, fay, faz, fgx, fgy; 
+
 
 uint8_t Check_ADDR_MPU(void){
     Wire.beginTransmission(MPU6050_ADDR);
@@ -48,7 +58,7 @@ void MPU_Getvalue(){
     Wire.beginTransmission(MPU6050_ADDR);
     Wire.write(ACCEL_XOUT_H);
     Wire.endTransmission();
-    Wire. requestFrom(MPU6050_ADDR,14);
+    Wire.requestFrom(MPU6050_ADDR, 14);
     uint8_t data[14];
     for(int i=0; i<14;i++){
         data[i] = Wire.read();
@@ -70,30 +80,58 @@ void offset(){
         MPU_Getvalue();
         sum_gx += gx;
         sum_gy += gy;
-        delay(2);
+        //delay(2);
     }
+    
     gx_offset = (float)sum_gx/500.0;
     gy_offset = (float)sum_gy/500.0;
 }
 
-void Convert_Pitch_Raw(void){
-    float alpha = 0.955, dt = 0.01, gyro_sensitive = 16.4;
-    static float Integral_fgx = 0, Integral_fgy = 0;
+// void Convert_Pitch_Raw(void){
+//     float alpha = 0.955, dt = 0.01, gyro_sensitive = 16.4;
+//     Integral_fgx = 0, Integral_fgy = 0;
 
-    float fax = (float)ax; float fay = (float)ay; float faz = (float)az;
-    float fgx = (float)gx - gx_offset; float fgy = (float)gy - gy_offset; 
+//     float fax = (float)ax; float fay = (float)ay; float faz = (float)az;
+//     float fgx = (float)gx - gx_offset; float fgy = (float)gy - gy_offset; 
 
-    Integral_fgx += (fgx / gyro_sensitive) * dt;
-    Integral_fgy += (fgy / gyro_sensitive) * dt;
+//     Integral_fgx += (fgx / gyro_sensitive) * dt;
+//     Integral_fgy += (fgy / gyro_sensitive) * dt;
 
-    float Gravity_fax = atan2(fax, sqrt(fay * fay + faz * faz)) * 180.0 / PI;
-    float Gravity_fay = atan2(fay, sqrt(fax * fax + faz * faz)) * 180.0 / PI;
+//     Gravity_fax = atan2(fax, sqrt(fay * fay + faz * faz)) * 180.0 / PI;
+//     Gravity_fay = atan2(fay, sqrt(fax * fax + faz * faz)) * 180.0 / PI;
 
-    pitch_raw = alpha * Integral_fgx + (1.0 - alpha) * Gravity_fax;
-    roll_raw  = alpha * Integral_fgy + (1.0 - alpha) * Gravity_fay;
+//     // pitch_raw = alpha * Integral_fgx + (1.0 - alpha) * Gravity_fax;
+//     // roll_raw  = alpha * Integral_fgy + (1.0 - alpha) * Gravity_fay;
+//     pitch_raw = Gravity_fax + Integral_fgx * dt;
+//     roll_raw  = Gravity_fay + Integral_fgy * dt;
+// }
+
+void Convert_Pitch_Raw(void) {
+    // static unsigned long lastTime = 0;
+    preTime = micros();
+
+    dt = (preTime - lastTime) / 1000000.0;
+
+    fax = (float)ax;
+    fay = (float)ay;
+    faz = (float)az;
+
+    fgx = ((float)gx - gx_offset) / gyro_sensitive; 
+    fgy = ((float)gy - gy_offset) / gyro_sensitive;
+
+    Gravity_fax = atan2(fax, sqrt(fay * fay + faz * faz)) * 180.0 / PI;
+    Gravity_fay = atan2(fay, sqrt(fax * fax + faz * faz)) * 180.0 / PI;
+
+    // static float Integral_fgx = 0, Integral_fgy = 0;
+    // Integral_fgx += fgx * dt;
+    // Integral_fgy += fgy * dt;
+
+    pitch_raw = alpha * (pitch_raw + fgx * dt) + (1.0 - alpha) * Gravity_fax;
+    roll_raw  = alpha * (roll_raw  + fgy * dt) + (1.0 - alpha) * Gravity_fay;
+    lastTime = preTime;
 }
 
 void MPU_Kalman_filter(float *Pitch_Up, float *Roll_Up){
     *Pitch_Up =  Pitch_filter.updateEstimate(pitch_raw);
     *Roll_Up  =  Roll_filter.updateEstimate (roll_raw);
-}
+} 

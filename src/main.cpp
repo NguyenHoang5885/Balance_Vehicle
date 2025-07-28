@@ -7,9 +7,10 @@ extern int16_t ax, ay ,az, temp, gx, gy, gz;
 extern int PID_output;
 extern float startPoint;
 unsigned long lasttime;
-extern float Angle_previous;
-extern float Angle_currently;
+extern float previousAngle, currentAngle;
 bool once = true;
+float Pitch, Roll;
+float original_sumPitch = 0;
 
 void setup(){
     Serial.begin(115200);
@@ -27,33 +28,47 @@ void setup(){
     else{
         Serial.println("TRUE");
         MPU_Init();
+        if(once){
+            once = false;
+            for(int i = 0 ; i < 20; i++){
+                MPU_Getvalue();
+                Convert_Pitch_Raw();
+                MPU_Kalman_filter(&Pitch, &Roll);
+                original_sumPitch += Pitch;
+            }
+            startPoint    = original_sumPitch / 20.0;
+            previousAngle = startPoint;
+            currentAngle  = startPoint;
+        }
         offset();
     }
     
 }
-
+void T(){
+    static unsigned long timeT = 0;
+    Serial.println(micros() - timeT);
+    timeT = micros();
+}
+float output = 0;
 void loop(){
-    float Pitch, Roll;
     MPU_Getvalue();
     Convert_Pitch_Raw();
     MPU_Kalman_filter(&Pitch, &Roll);
-    if(once){
-        once = false;
-        startPoint = Pitch;
-        Angle_previous = Pitch;
-        Angle_currently = Pitch;
-    }
+    
 
     // Serial.print(">");
     // Serial.print("Pitch: ");
-    // Serial.print(Pitch);
+    // Serial.println(Pitch);
     // Serial.print(",");
     // Serial.print("Roll: ");
     // Serial.println(Roll);
-    //delay(2);
+    // delay(1);
     float delta_time = (millis() - lasttime) / 1000.0;
     lasttime = millis();
 
-    PID(Pitch, delta_time);
-    Control(PID_output);
+    PID(Pitch, delta_time, &output);
+    //Serial.print(output);
+    //Serial.print(" ");
+    Control((int)output);
+    // T();
 }

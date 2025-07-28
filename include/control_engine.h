@@ -9,6 +9,6 @@
 #define IN4 8 
 
 void Control(int pwm);
-void PID(float pid_angle, float dt);
+void PID(float pid_angle, float dt, float *output);
 
 #endif
