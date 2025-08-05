@@ -11,6 +11,7 @@ extern float previousAngle, currentAngle;
 bool once = true;
 float Pitch, Roll;
 float original_sumPitch = 0;
+double delta_time = 0 ;
 
 void setup(){
     Serial.begin(115200);
@@ -55,20 +56,21 @@ void loop(){
     Convert_Pitch_Raw();
     MPU_Kalman_filter(&Pitch, &Roll);
     
-
     // Serial.print(">");
-    // Serial.print("Pitch: ");
-    // Serial.println(Pitch);
+    Serial.print("Pitch: ");
+    Serial.println(Pitch);
     // Serial.print(",");
     // Serial.print("Roll: ");
     // Serial.println(Roll);
     // delay(1);
-    float delta_time = (millis() - lasttime) / 1000.0;
-    lasttime = millis();
+    delta_time = (micros() - lasttime) / 1000000.0;
+    lasttime = micros();
 
     PID(Pitch, delta_time, &output);
-    //Serial.print(output);
-    //Serial.print(" ");
+    Serial.print("Delta time ");
+    Serial.println(delta_time,7);
+    Serial.print("PWM ");
+    Serial.println(output);
     Control((int)output);
     // T();
 }
