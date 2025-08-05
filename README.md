@@ -12,7 +12,7 @@
 - MPU6050 (Gyroscope + Accelerometer)
 - L298N Motor Driver
 - DC Motors + Wheels
-- Battery Pack
+- Battery Pack (BMS integration)
 
 🔌 Wiring Diagram
 
