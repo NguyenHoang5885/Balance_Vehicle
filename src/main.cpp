@@ -36,38 +36,37 @@ void setup(){
                 init_SumPitch += Pitch;
             }
             startPoint    = init_SumPitch / 20.0;
-            //currentAngle  = startPoint;
         }
         offset();
     }
     
 }
-// void T(){
-//     static unsigned long timeT = 0;
-//     Serial.println(micros() - timeT);
-//     timeT = micros();
-// }
+void T(){
+    static unsigned long timeT = 0;
+    Serial.println(micros() - timeT);
+    timeT = micros();
+}
 float output = 0;
 void loop(){
     MPU_Getvalue();
     Convert_Pitch_Raw();
     MPU_Kalman_filter(&Pitch, &Roll);
     
-    // Serial.print(">");
-    Serial.print("Pitch: ");
-    Serial.println(Pitch);
+    //Serial.print(">");
+    //Serial.print("Pitch: ");
+    //Serial.println(Pitch);
     // Serial.print(",");
     // Serial.print("Roll: ");
     // Serial.println(Roll);
-    // delay(1);
     delta_time = (micros() - lasttime) / 1000000.0;
     lasttime = micros();
 
     PID(Pitch, delta_time, &output);
-    Serial.print("Delta time ");
-    Serial.println(delta_time,7);
-    Serial.print("PWM ");
+    //Serial.print("Delta time ");
+    //Serial.println(delta_time,7);
+    //Serial.print("PWM: ");
     Serial.println(output);
+    //Serial.print(",");
     Control((int)output);
-    // T();
+    //T();
 }

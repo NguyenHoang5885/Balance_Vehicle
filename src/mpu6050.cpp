@@ -11,7 +11,6 @@ float pitch_raw, roll_raw;
 float gx_offset, gy_offset;
 float startPoint = 0;
 float Gravity_fax, Gravity_fay;
-//static float Integral_fgx = 0, Integral_fgy = 0;
 
 float alpha = 0.99;
 static unsigned long lastTime = 0;
@@ -87,25 +86,6 @@ void offset(){
     gy_offset = (float)sum_gy/500.0;
 }
 
-// void Convert_Pitch_Raw(void){
-//     float alpha = 0.955, dt = 0.01, gyro_sensitive = 16.4;
-//     Integral_fgx = 0, Integral_fgy = 0;
-
-//     float fax = (float)ax; float fay = (float)ay; float faz = (float)az;
-//     float fgx = (float)gx - gx_offset; float fgy = (float)gy - gy_offset; 
-
-//     Integral_fgx += (fgx / gyro_sensitive) * dt;
-//     Integral_fgy += (fgy / gyro_sensitive) * dt;
-
-//     Gravity_fax = atan2(fax, sqrt(fay * fay + faz * faz)) * 180.0 / PI;
-//     Gravity_fay = atan2(fay, sqrt(fax * fax + faz * faz)) * 180.0 / PI;
-
-//     // pitch_raw = alpha * Integral_fgx + (1.0 - alpha) * Gravity_fax;
-//     // roll_raw  = alpha * Integral_fgy + (1.0 - alpha) * Gravity_fay;
-//     pitch_raw = Gravity_fax + Integral_fgx * dt;
-//     roll_raw  = Gravity_fay + Integral_fgy * dt;
-// }
-
 void Convert_Pitch_Raw(void) {
     // static unsigned long lastTime = 0;
     preTime = micros();
@@ -121,10 +101,6 @@ void Convert_Pitch_Raw(void) {
 
     Gravity_fax = atan2(fax, sqrt(fay * fay + faz * faz)) * 180.0 / PI;
     Gravity_fay = atan2(fay, sqrt(fax * fax + faz * faz)) * 180.0 / PI;
-
-    // static float Integral_fgx = 0, Integral_fgy = 0;
-    // Integral_fgx += fgx * dt;
-    // Integral_fgy += fgy * dt;
 
     pitch_raw = alpha * (pitch_raw + fgx * dt) + (1.0 - alpha) * Gravity_fax;
     roll_raw  = alpha * (roll_raw  + fgy * dt) + (1.0 - alpha) * Gravity_fay;
