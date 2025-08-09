@@ -16,12 +16,7 @@
 #define GYRO_XOUT_H  0x43
 
 uint8_t Check_ADDR_MPU(void);
-void MPU_Init(void);
-void MPU_Getvalue();
 
-void offset();
-
-void Convert_Pitch_Raw(void);
-void MPU_Kalman_filter(float *Pitch_Up, float *Roll_Up);
+void Get_MPU();
 
 #endif

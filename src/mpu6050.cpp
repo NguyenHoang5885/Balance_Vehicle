@@ -1,113 +1,34 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include <MPU6050.h>
 #include "mpu6050.h"  
-#include "SimpleKalmanFilter.h"
+#include "I2Cdev.h"
+#include "MPU6050_6Axis_MotionApps20.h"
 
-SimpleKalmanFilter Pitch_filter( 2, 2, 0.01);
-SimpleKalmanFilter Roll_filter ( 2, 2, 0.01);
+//-----------------------------------------------------
+extern MPU6050 mpu;
+#define OUTPUT_READABLE_YAWPITCHROLL
+uint8_t FIFOBuffer[64]; // FIFO storage buffer //all
+Quaternion q;           // [w, x, y, z]         Quaternion container 
+VectorFloat gravity;    // [x, y, z]            Gravity vector 
+float ypr[3];           // [yaw, pitch, roll]   Yaw/Pitch/Roll container and gravity vector 
+extern float Pitch, Roll;
 
-int16_t ax, ay ,az, temp, gx, gy, gz;
-float pitch_raw, roll_raw;
-float gx_offset, gy_offset;
-float startPoint = 0;
-float Gravity_fax, Gravity_fay;
-
-float alpha = 0.99;
-static unsigned long lastTime = 0;
-unsigned long preTime;
-float dt;
-float gyro_sensitive = 16.4; 
-float fax, fay, faz, fgx, fgy; 
-
-
-uint8_t Check_ADDR_MPU(void){
-    Wire.beginTransmission(MPU6050_ADDR);
-    Wire.write(WHO_AM_I);
-    Wire.endTransmission(false);
-    Wire.requestFrom(MPU6050_ADDR,1);
-    if(Wire.available() != 0){
-        uint8_t ID = Wire.read();
-        if(ID == 0x68 || ID == 0X69){
-            return ID; 
-        }
-        else{
-            return 0xFF;
-        }
+void Get_MPU(){
+    if (mpu.dmpGetCurrentFIFOPacket(FIFOBuffer)) { // Get the Latest packet 
+        #ifdef OUTPUT_READABLE_YAWPITCHROLL
+        /* Display Euler angles in degrees */
+        mpu.dmpGetQuaternion(&q, FIFOBuffer);
+        mpu.dmpGetGravity(&gravity, &q);
+        mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+        //Serial.print("ypr\t");
+        //Serial.print(ypr[0] * 180/M_PI); //Yaw
+        //Serial.print("\t");
+        // Serial.print(ypr[1] * 180/M_PI); //Pitch
+        // Serial.print("\t");
+        // Serial.println(ypr[2] * 180/M_PI); //Row
+        Pitch = ypr[1] * 180/M_PI;
+        Roll  = ypr[2] * 180/M_PI;
+        #endif
     }
-    else{ return 0xFF; }
 }
-
-void MPU_Init(){
-    Wire.begin();
-    Wire.setClock(400000);
-    Wire.beginTransmission(MPU6050_ADDR);
-    Wire.write(PWR_MGMT_1);   Wire.write(0x00); Wire.endTransmission();
-
-    Wire.beginTransmission(MPU6050_ADDR);
-    Wire.write(CONFIG);       Wire.write(0x00); Wire.endTransmission();
-    
-    Wire.beginTransmission(MPU6050_ADDR);
-    Wire.write(GYRO_CONFIG);  Wire.write(0x18); Wire.endTransmission();
-
-    Wire.beginTransmission(MPU6050_ADDR);
-    Wire.write(ACCEL_CONFIG); Wire.write(0x18); Wire.endTransmission();
-}
-
-void MPU_Getvalue(){
-    Wire.beginTransmission(MPU6050_ADDR);
-    Wire.write(ACCEL_XOUT_H);
-    Wire.endTransmission();
-    Wire.requestFrom(MPU6050_ADDR, 14);
-    uint8_t data[14];
-    for(int i=0; i<14;i++){
-        data[i] = Wire.read();
-    }
-    ax = data[0] <<8 | data[1] ;
-    ay = data[2] <<8 | data[3] ;
-    az = data[4] <<8 | data[5] ;
-
-    temp= data[6]<<8 | data[7] ;
-
-    gx = data[8] <<8 | data[9] ;
-    gy = data[10]<<8 | data[11];
-    gz = data[12]<<8 | data[13];  
-}
-
-void offset(){
-    long sum_gx = 0, sum_gy = 0;
-    for(int i=0; i < 500; i++){
-        MPU_Getvalue();
-        sum_gx += gx;
-        sum_gy += gy;
-        //delay(2);
-    }
-    
-    gx_offset = (float)sum_gx/500.0;
-    gy_offset = (float)sum_gy/500.0;
-}
-
-void Convert_Pitch_Raw(void) {
-    // static unsigned long lastTime = 0;
-    preTime = micros();
-
-    dt = (preTime - lastTime) / 1000000.0;
-
-    fax = (float)ax;
-    fay = (float)ay;
-    faz = (float)az;
-
-    fgx = ((float)gx - gx_offset) / gyro_sensitive; 
-    fgy = ((float)gy - gy_offset) / gyro_sensitive;
-
-    Gravity_fax = atan2(fax, sqrt(fay * fay + faz * faz)) * 180.0 / PI;
-    Gravity_fay = atan2(fay, sqrt(fax * fax + faz * faz)) * 180.0 / PI;
-
-    pitch_raw = alpha * (pitch_raw + fgx * dt) + (1.0 - alpha) * Gravity_fax;
-    roll_raw  = alpha * (roll_raw  + fgy * dt) + (1.0 - alpha) * Gravity_fay;
-    lastTime = preTime;
-}
-
-void MPU_Kalman_filter(float *Pitch_Up, float *Roll_Up){
-    *Pitch_Up =  Pitch_filter.updateEstimate(pitch_raw);
-    *Roll_Up  =  Roll_filter.updateEstimate (roll_raw);
-} 
